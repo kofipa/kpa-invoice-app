@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPA Invoice App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #333; }
+
+    /* ── Nav ── */
+    .navbar {
+      background: #1a3c5e; color: white;
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .navbar h1 { font-size: 20px; cursor: pointer; letter-spacing: 1px; }
+    .navbar button {
+      background: white; color: #1a3c5e;
+      border: none; padding: 8px 18px; border-radius: 4px;
+      cursor: pointer; font-weight: bold; font-size: 13px;
+    }
+
+    /* ── Buttons ── */
+    .btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary   { background: #1a3c5e; color: white; }
+    .btn-secondary { background: #e2e6ea; color: #333; margin-right: 6px; }
+    .btn-success   { background: #28a745; color: white; }
+    .btn-danger    { background: #dc3545; color: white; }
+
+    /* ── Dashboard ── */
+    .dashboard { max-width: 960px; margin: 36px auto; padding: 0 20px; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .dash-header h2 { font-size: 22px; color: #1a3c5e; }
+
+    .inv-card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.08); overflow: hidden; }
+    .inv-table-head {
+      display: grid; grid-template-columns: 140px 110px 1fr 110px 200px;
+      gap: 12px; padding: 12px 20px;
+      background: #1a3c5e; color: white; font-size: 13px; font-weight: bold;
+    }
+    .inv-row {
+      display: grid; grid-template-columns: 140px 110px 1fr 110px 200px;
+      gap: 12px; padding: 13px 20px;
+      border-bottom: 1px solid #eee; align-items: center; font-size: 13px;
+    }
+    .inv-row:last-child { border-bottom: none; }
+    .inv-row:hover { background: #f8f9fb; }
+    .inv-ref { font-weight: bold; color: #1a3c5e; }
+    .inv-total { font-weight: bold; }
+    .empty { padding: 56px; text-align: center; color: #aaa; font-size: 15px; }
+
+    /* ── Form ── */
+    .form-wrap { max-width: 920px; margin: 36px auto; padding: 0 20px; }
+    .form-card { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding: 36px; }
+    .form-card-title { font-size: 20px; font-weight: bold; color: #1a3c5e; margin-bottom: 28px; }
+
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: 12px; font-weight: bold; text-transform: uppercase;
+      letter-spacing: .8px; color: #1a3c5e;
+      margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #1a3c5e;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; color: #777; }
+    .field input, .field textarea, .field select {
+      border: 1px solid #d0d5dd; border-radius: 5px;
+      padding: 8px 10px; font-size: 14px; font-family: inherit;
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: #1a3c5e; box-shadow: 0 0 0 2px rgba(26,60,94,.12); }
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    /* Line items table */
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .items-table th {
+      text-align: left; font-size: 12px; color: #777;
+      padding: 8px 10px; border-bottom: 2px solid #eee;
+    }
+    .items-table td { padding: 5px 8px; }
+    .items-table td input {
+      width: 100%; border: 1px solid #d0d5dd; border-radius: 4px;
+      padding: 7px 8px; font-size: 13px;
+    }
+    .items-table td input:focus { outline: none; border-color: #1a3c5e; }
+    .items-table .col-desc { width: 48%; }
+    .items-table .col-qty  { width: 9%; }
+    .items-table .col-amt  { width: 16%; }
+    .items-table .col-tot  { width: 14%; font-weight: bold; font-size: 13px; padding-right: 4px; text-align: right; }
+    .items-table .col-del  { width: 8%; text-align: center; }
+
+    /* Summary panel */
+    .summary-panel { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .sum-row { display: flex; gap: 24px; align-items: center; font-size: 13px; }
+    .sum-row .s-lbl { min-width: 150px; text-align: right; color: #666; }
+    .sum-row .s-val { min-width: 100px; text-align: right; font-weight: bold; }
+    .sum-row input { width: 110px; text-align: right; border: 1px solid #d0d5dd; border-radius: 4px; padding: 6px 8px; font-size: 13px; }
+    .sum-divider { border-top: 2px solid #1a3c5e; padding-top: 6px; margin-top: 4px; }
+    .sum-divider .s-lbl, .sum-divider .s-val { color: #1a3c5e; font-size: 15px; }
+
+    .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid #eee; }
+
+    /* ── Invoice Preview (screen) ── */
+    .preview-wrap { max-width: 870px; margin: 36px auto; padding: 0 20px; }
+    .preview-actions { display: flex; gap: 10px; margin-bottom: 18px; align-items: center; }
+
+    .inv-paper {
+      background: white;
+      padding: 48px 52px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.12);
+      min-height: 1100px;
+      position: relative;
+      font-family: Arial, sans-serif;
+    }
+
+    /* header row */
+    .inv-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .inv-title-text { font-size: 30px; font-weight: bold; letter-spacing: 3px; color: #222; }
+
+    /* parties */
+    .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+    .client-block h3 { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+    .client-block p  { font-size: 12px; color: #555; line-height: 1.7; }
+    .inv-meta { text-align: right; font-size: 12px; }
+    .inv-meta .meta-label { color: #999; font-size: 11px; margin-top: 8px; }
+    .inv-meta .meta-val   { font-weight: bold; margin-bottom: 2px; }
+    .inv-meta .presenter  { color: #1a3c5e; font-size: 11px; }
+
+    /* line items */
+    .inv-items { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+    .inv-items th {
+      font-size: 13px; font-weight: bold; padding: 10px 8px;
+      border-top: 2px solid #333; border-bottom: 2px solid #333;
+    }
+    .inv-items th:first-child { text-align: left; }
+    .inv-items th:nth-child(2) { text-align: center; }
+    .inv-items th:nth-child(3), .inv-items th:nth-child(4) { text-align: right; }
+    .inv-items td { font-size: 12px; padding: 9px 8px; border-bottom: 1px solid #eee; }
+    .inv-items td:first-child { text-align: left; }
+    .inv-items td:nth-child(2) { text-align: center; }
+    .inv-items td:nth-child(3), .inv-items td:nth-child(4) { text-align: right; }
+
+    .inv-subtotal {
+      display: flex; justify-content: space-between;
+      padding: 10px 8px; background: #eef0f4;
+      font-weight: bold; font-size: 13px; color: #1a3c5e;
+      margin-bottom: 20px;
+    }
+
+    .inv-summary { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; margin-bottom: 36px; }
+    .inv-sum-row { display: flex; gap: 20px; font-size: 12px; }
+    .inv-sum-row .sl { color: #555; font-weight: bold; min-width: 180px; text-align: right; }
+    .inv-sum-row .sv { min-width: 80px; text-align: right; }
+    .inv-sum-total { border-top: 2px solid #1a3c5e; padding-top: 5px; margin-top: 5px; }
+    .inv-sum-total .sl, .inv-sum-total .sv { color: #1a3c5e; font-weight: bold; font-size: 13px; }
+
+    .inv-payment { font-size: 11px; color: #555; line-height: 1.9; margin-bottom: 20px; }
+    .inv-payment strong { color: #222; }
+
+    .inv-footer {
+      position: absolute; bottom: 24px; left: 52px; right: 52px;
+      border-top: 1px solid #ddd; padding-top: 12px;
+      text-align: center; font-size: 10px; color: #888;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body > * { display: none; }
+      .inv-paper { display: block !important; position: static !important; box-shadow: none !important; padding: 28px 36px !important; min-height: unset !important; }
+      .inv-footer { position: fixed !important; bottom: 16px !important; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ── KPA company constants ── */
+const KPA = {
+  name:          'KPA Group Limited',
+  address:       '16 Forest Drive, Sale, Cheshire, M33 4SS',
+  mobile:        '07918 157384',
+  telephone:     '0161 973 5834',
+  email:         'admin@kpagroupltd.com',
+  website:       'www.kpagroupltd.com',
+  companyReg:    '09826335',
+  accountNumber: '16415549',
+  sortCode:      '83-04-25',
+};
+
+function nextRef(invoices) {
+  let max = 1130;
+  invoices.forEach(inv => {
+    const m = (inv.reference || '').match(/KPA0*(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1]));
+  });
+  return `KPA${String(max + 1).padStart(5, '0')}`;
+}
+
+function fmt(n) {
+  return `£ ${parseFloat(n || 0).toFixed(2)}`;
+}
+
+function calcTotals(items, discount, deposit) {
+  const net  = items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.amount) || 0), 0);
+  const disc = parseFloat(discount) || 0;
+  const dep  = parseFloat(deposit)  || 0;
+  return { net, disc, dep, total: net - disc - dep };
+}
+
+function blankInvoice(invoices) {
+  return {
+    id:            Date.now(),
+    reference:     nextRef(invoices),
+    date:          new Date().toLocaleDateString('en-GB'),
+    ref:           '',
+    presentedBy:   'Aaron Paddison',
+    presenterEmail:'Admin@KPAGroupltd.com',
+    clientName:    '',
+    clientCompany: '',
+    clientAddress: '',
+    clientEmail:   '',
+    items:         [{ id: 1, description: '', qty: 1, amount: '' }],
+    discount:      '',
+    deposit:       '',
+  };
+}
+
+/* ════════════════════════════════════════
+   INVOICE PREVIEW
+════════════════════════════════════════ */
+function InvoicePreview({ invoice, onBack, onEdit }) {
+  const { net, disc, dep, total } = calcTotals(invoice.items, invoice.discount, invoice.deposit);
+
+  return (
+    <div className="preview-wrap">
+      <div className="preview-actions">
+        <button className="btn btn-secondary" onClick={onBack}>← All Invoices</button>
+        <button className="btn btn-primary"   onClick={onEdit}>Edit</button>
+        <button className="btn btn-success"   onClick={() => window.print()}>🖨 Print / Save as PDF</button>
+      </div>
+
+      <div className="inv-paper">
+        {/* Header */}
+        <div className="inv-hdr">
+          <img src="logo-nucleus-client.png" alt="Nucleus" style={{height:70, width:'auto'}} />
+          <div className="inv-title-text">INVOICE</div>
+          <img src="logo-kpa-group.png" alt="KPA Group Limited" style={{height:70, width:'auto'}} />
+        </div>
+
+        {/* Client + Invoice meta */}
+        <div className="inv-parties">
+          <div className="client-block">
+            <h3>{invoice.clientName || '—'}</h3>
+            <p>
+              {invoice.clientCompany && <>{invoice.clientCompany}<br /></>}
+              {invoice.clientAddress && invoice.clientAddress.split('\n').map((l, i) => (
+                <span key={i}>{l}<br /></span>
+              ))}
+              {invoice.clientEmail}
+            </p>
+          </div>
+          <div className="inv-meta">
+            <div className="meta-label">Invoice Reference:</div>
+            <div className="meta-val">{invoice.reference}<br />{invoice.date}</div>
+            {invoice.ref && <div style={{marginBottom:6, fontSize:11}}>Ref: {invoice.ref}</div>}
+            <div className="meta-label">Presented By:</div>
+            <div className="presenter">{invoice.presentedBy}<br />{invoice.presenterEmail}</div>
+          </div>
+        </div>
+
+        {/* Line items */}
+        <table className="inv-items">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Amount</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoice.items.map(item => {
+              const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.amount) || 0);
+              return (
+                <tr key={item.id}>
+                  <td>{item.description}</td>
+                  <td>{item.qty}</td>
+                  <td>{fmt(item.amount)}</td>
+                  <td>{fmt(lineTotal)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Subtotal bar */}
+        <div className="inv-subtotal">
+          <span>Total Professional Services £</span>
+          <span>{net.toFixed(2)}</span>
+        </div>
+
+        {/* Summary */}
+        <div className="inv-summary">
+          <div className="inv-sum-row">
+            <span className="sl">Net Amount £</span>
+            <span className="sv">{net.toFixed(2)}</span>
+          </div>
+          <div className="inv-sum-row">
+            <span className="sl">Discount £</span>
+            <span className="sv">{disc > 0 ? disc.toFixed(2) : '-'}</span>
+          </div>
+          <div className="inv-sum-row">
+            <span className="sl">Desposit £</span>
+            <span className="sv">{dep > 0 ? dep.toFixed(2) : '-'}</span>
+          </div>
+          <div className="inv-sum-row inv-sum-total">
+            <span className="sl">Invoice Total Amount £</span>
+            <span className="sv">{total.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Payment info */}
+        <div className="inv-payment">
+          <p>Payment Terms: 14 Days from Date of Invoice - Subject to Status. Account details are below.</p>
+          <p><strong>Account Number:</strong> {KPA.accountNumber}</p>
+          <p><strong>Sort Code:</strong> {KPA.sortCode}</p>
+        </div>
+
+        {/* Footer */}
+        <div className="inv-footer">
+          {KPA.address} &nbsp;|&nbsp; M: {KPA.mobile} &nbsp;|&nbsp; T: {KPA.telephone} &nbsp;|&nbsp; E: {KPA.email} &nbsp;|&nbsp; W: {KPA.website}<br />
+          Company registration number: {KPA.companyReg}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════
+   INVOICE FORM
+════════════════════════════════════════ */
+function InvoiceForm({ invoice: init, onSave, onCancel }) {
+  const [inv, setInv] = useState(init);
+
+  const set = (k, v) => setInv(p => ({ ...p, [k]: v }));
+
+  const setItem = (id, k, v) =>
+    setInv(p => ({ ...p, items: p.items.map(it => it.id === id ? { ...it, [k]: v } : it) }));
+
+  const addItem = () =>
+    setInv(p => ({ ...p, items: [...p.items, { id: Date.now(), description: '', qty: 1, amount: '' }] }));
+
+  const removeItem = id =>
+    setInv(p => ({ ...p, items: p.items.filter(it => it.id !== id) }));
+
+  const { net, disc, dep, total } = calcTotals(inv.items, inv.discount, inv.deposit);
+
+  return (
+    <div className="form-wrap">
+      <div className="form-card">
+        <div className="form-card-title">
+          {init.clientName ? 'Edit Invoice' : 'New Invoice'} — {inv.reference}
+        </div>
+
+        {/* Invoice details */}
+        <div className="section">
+          <div className="section-title">Invoice Details</div>
+          <div className="grid-2">
+            <div className="field">
+              <label>Invoice Reference</label>
+              <input value={inv.reference} onChange={e => set('reference', e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Date</label>
+              <input value={inv.date} onChange={e => set('date', e.target.value)} placeholder="DD/MM/YYYY" />
+            </div>
+            <div className="field">
+              <label>Ref (client reference, optional)</label>
+              <input value={inv.ref} onChange={e => set('ref', e.target.value)} placeholder="Leave blank if none" />
+            </div>
+            <div className="field">
+              <label>Presented By</label>
+              <input value={inv.presentedBy} onChange={e => set('presentedBy', e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Presenter Email</label>
+              <input value={inv.presenterEmail} onChange={e => set('presenterEmail', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Client details */}
+        <div className="section">
+          <div className="section-title">Client Details</div>
+          <div className="grid-2">
+            <div className="field">
+              <label>Client Name *</label>
+              <input value={inv.clientName} onChange={e => set('clientName', e.target.value)} placeholder="e.g. Phil George" />
+            </div>
+            <div className="field">
+              <label>Company</label>
+              <input value={inv.clientCompany} onChange={e => set('clientCompany', e.target.value)} placeholder="e.g. iRob International Limited" />
+            </div>
+            <div className="field">
+              <label>Email</label>
+              <input value={inv.clientEmail} onChange={e => set('clientEmail', e.target.value)} placeholder="client@example.com" />
+            </div>
+          </div>
+          <div className="field" style={{marginTop:14}}>
+            <label>Address (one line per row)</label>
+            <textarea
+              value={inv.clientAddress}
+              onChange={e => set('clientAddress', e.target.value)}
+              placeholder={"Units 1 & 2, 25 Station Road\nColeshill Industrial Estate, Coleshill\nWarwickshire\nB46 1HT"}
+            />
+          </div>
+        </div>
+
+        {/* Line items */}
+        <div className="section">
+          <div className="section-title">Line Items</div>
+          <table className="items-table">
+            <thead>
+              <tr>
+                <th className="col-desc">Description</th>
+                <th className="col-qty">Qty</th>
+                <th className="col-amt">Amount (£)</th>
+                <th className="col-tot">Total</th>
+                <th className="col-del"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {inv.items.map(item => {
+                const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.amount) || 0);
+                return (
+                  <tr key={item.id}>
+                    <td className="col-desc">
+                      <input
+                        value={item.description}
+                        onChange={e => setItem(item.id, 'description', e.target.value)}
+                        placeholder="Service or product description"
+                      />
+                    </td>
+                    <td className="col-qty">
+                      <input
+                        type="number" min="1" step="1"
+                        value={item.qty}
+                        onChange={e => setItem(item.id, 'qty', e.target.value)}
+                      />
+                    </td>
+                    <td className="col-amt">
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={item.amount}
+                        onChange={e => setItem(item.id, 'amount', e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </td>
+                    <td className="col-tot">{fmt(lineTotal)}</td>
+                    <td className="col-del">
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => removeItem(item.id)}
+                        disabled={inv.items.length === 1}
+                        title="Remove line"
+                      >✕</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <button className="btn btn-secondary" onClick={addItem}>+ Add Line Item</button>
+        </div>
+
+        {/* Summary */}
+        <div className="section">
+          <div className="section-title">Summary</div>
+          <div className="summary-panel">
+            <div className="sum-row">
+              <span className="s-lbl">Net Amount</span>
+              <span className="s-val">£ {net.toFixed(2)}</span>
+            </div>
+            <div className="sum-row">
+              <span className="s-lbl">Discount (£)</span>
+              <input
+                type="number" min="0" step="0.01"
+                value={inv.discount}
+                onChange={e => set('discount', e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="sum-row">
+              <span className="s-lbl">Deposit (£)</span>
+              <input
+                type="number" min="0" step="0.01"
+                value={inv.deposit}
+                onChange={e => set('deposit', e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="sum-row sum-divider">
+              <span className="s-lbl">Invoice Total</span>
+              <span className="s-val">£ {total.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-actions">
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary"   onClick={() => onSave(inv)}>Save &amp; Preview</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════ */
+function Dashboard({ invoices, onNew, onView, onEdit, onDelete }) {
+  return (
+    <div className="dashboard">
+      <div className="dash-header">
+        <h2>Invoices</h2>
+        <button className="btn btn-primary" onClick={onNew}>+ New Invoice</button>
+      </div>
+      <div className="inv-card">
+        {invoices.length === 0 ? (
+          <div className="empty">No invoices yet — click <strong>+ New Invoice</strong> to get started.</div>
+        ) : (
+          <>
+            <div className="inv-table-head">
+              <span>Reference</span>
+              <span>Date</span>
+              <span>Client</span>
+              <span>Total</span>
+              <span>Actions</span>
+            </div>
+            {invoices.map(inv => {
+              const { total } = calcTotals(inv.items, inv.discount, inv.deposit);
+              return (
+                <div className="inv-row" key={inv.id}>
+                  <span className="inv-ref">{inv.reference}</span>
+                  <span>{inv.date}</span>
+                  <span>
+                    {inv.clientName || '—'}
+                    {inv.clientCompany ? ` / ${inv.clientCompany}` : ''}
+                  </span>
+                  <span className="inv-total">£ {total.toFixed(2)}</span>
+                  <span>
+                    <button className="btn btn-secondary" onClick={() => onView(inv)}>View</button>
+                    <button className="btn btn-secondary" onClick={() => onEdit(inv)}>Edit</button>
+                    <button className="btn btn-danger"    onClick={() => onDelete(inv.id)}>Delete</button>
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════
+   APP ROOT
+════════════════════════════════════════ */
+function App() {
+  const [invoices, setInvoices] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kpa_invoices') || '[]'); }
+    catch { return []; }
+  });
+  const [view,    setView]    = useState('dashboard');
+  const [current, setCurrent] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('kpa_invoices', JSON.stringify(invoices));
+  }, [invoices]);
+
+  const handleNew = () => {
+    setCurrent(blankInvoice(invoices));
+    setView('form');
+  };
+
+  const handleSave = inv => {
+    setInvoices(prev => {
+      const exists = prev.find(i => i.id === inv.id);
+      return exists ? prev.map(i => i.id === inv.id ? inv : i) : [inv, ...prev];
+    });
+    setCurrent(inv);
+    setView('preview');
+  };
+
+  const handleDelete = id => {
+    if (window.confirm('Delete this invoice? This cannot be undone.')) {
+      setInvoices(prev => prev.filter(i => i.id !== id));
+    }
+  };
+
+  return (
+    <div>
+      <div className="navbar">
+        <h1 onClick={() => setView('dashboard')}>KPA Invoice App</h1>
+        {view !== 'dashboard' && (
+          <button onClick={() => setView('dashboard')}>All Invoices</button>
+        )}
+      </div>
+
+      {view === 'dashboard' && (
+        <Dashboard
+          invoices={invoices}
+          onNew={handleNew}
+          onView={inv => { setCurrent(inv); setView('preview'); }}
+          onEdit={inv => { setCurrent(inv); setView('form'); }}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {view === 'form' && current && (
+        <InvoiceForm
+          invoice={current}
+          onSave={handleSave}
+          onCancel={() => setView('dashboard')}
+        />
+      )}
+
+      {view === 'preview' && current && (
+        <InvoicePreview
+          invoice={current}
+          onBack={() => setView('dashboard')}
+          onEdit={() => setView('form')}
+        />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
