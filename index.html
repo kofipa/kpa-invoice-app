@@ -170,9 +170,10 @@
 
     /* ── Print ── */
     @media print {
-      body > * { display: none; }
-      .inv-paper { display: block !important; position: static !important; box-shadow: none !important; padding: 28px 36px !important; min-height: unset !important; }
-      .inv-footer { position: fixed !important; bottom: 16px !important; }
+      body * { visibility: hidden; }
+      .inv-paper, .inv-paper * { visibility: visible; }
+      .inv-paper { position: fixed; top: 0; left: 0; width: 100%; padding: 28px 36px; box-shadow: none; min-height: unset; }
+      .inv-footer { position: fixed; bottom: 16px; }
     }
   </style>
 </head>
